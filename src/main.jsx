@@ -117,6 +117,11 @@ function App() {
   }, []);
 
   function createRoom() {
+    if (!session) {
+      setAuthOpen(true);
+      return;
+    }
+
     const id = `lw-${Math.random().toString(36).slice(2, 8)}`;
     setCurrentRoom({
       id,
@@ -234,13 +239,12 @@ function LandingPage({ currentRoom, copied, createRoom, copyRoomLink, openRoom, 
       <section className="landing-hero" id="home">
         <h1>Study rooms for groups</h1>
         <p>
-          Start a shared room with a whiteboard, synced video, live cursors and AI help.
-          No account required.
+          Create a private study room with a whiteboard, synced video, live cursors and AI help.
         </p>
         <button className="create-room-button" type="button" onClick={createRoom}>
           {currentRoom ? "Create New Room" : "Create Room"}
         </button>
-        <span className="account-note">(No user account required)</span>
+        {!session && <span className="account-note">Sign in to create and share a room.</span>}
 
         {authOpen && !session && <AuthBox />}
 
@@ -308,7 +312,7 @@ function AuthBox() {
     setStatus("");
 
     if (!supabase) {
-      setStatus("Supabase is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to .env.");
+      setStatus("Login is not available right now.");
       return;
     }
 
@@ -322,13 +326,18 @@ function AuthBox() {
     try {
       const credentials = { email: email.trim(), password };
       const { data, error } = isSignup
-        ? await supabase.auth.signUp(credentials)
+        ? await supabase.auth.signUp({
+            ...credentials,
+            options: {
+              emailRedirectTo: window.location.origin
+            }
+          })
         : await supabase.auth.signInWithPassword(credentials);
 
       if (error) throw error;
 
       if (isSignup && !data.session) {
-        setStatus("Account created. Check your email if confirmation is enabled in Supabase.");
+        setStatus("Account created. Please verify your email, then sign in.");
       } else {
         setStatus(isSignup ? "Account created. You are signed in." : "Signed in.");
       }
@@ -379,11 +388,6 @@ function AuthBox() {
       </button>
 
       {status && <p className="auth-status">{status}</p>}
-      {!supabase && (
-        <p className="auth-hint">
-          Get these values from Supabase Project Settings → API. Use the project URL and anon/public key.
-        </p>
-      )}
     </form>
   );
 }
