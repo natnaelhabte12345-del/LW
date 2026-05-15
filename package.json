@@ -1,0 +1,28 @@
+{
+  "name": "lernraum-mvp",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1"
+  },
+  "dependencies": {
+    "@liveblocks/client": "^3.19.0",
+    "@liveblocks/react": "^3.19.0",
+    "@supabase/supabase-js": "^2.105.4",
+    "@tldraw/editor": "^5.0.0",
+    "@vitejs/plugin-react": "^5.1.1",
+    "lucide-react": "^0.561.0",
+    "react": "^19.2.1",
+    "react-dom": "^19.2.1",
+    "react-youtube": "^10.1.0",
+    "tldraw": "^5.0.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.2.6"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.59.1"
+  }
+}
