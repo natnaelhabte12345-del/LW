@@ -97,7 +97,9 @@ function App() {
   const [copied, setCopied] = useState(false);
   const [showRoom, setShowRoom] = useState(false);
   const [session, setSession] = useState(null);
+  const [testSession, setTestSession] = useState(null);
   const [authOpen, setAuthOpen] = useState(false);
+  const activeSession = session || testSession;
 
   useEffect(() => {
     if (!supabase) return undefined;
@@ -117,7 +119,7 @@ function App() {
   }, []);
 
   function createRoom() {
-    if (!session) {
+    if (!activeSession) {
       setAuthOpen(true);
       return;
     }
@@ -163,9 +165,17 @@ function App() {
       createRoom={createRoom}
       copyRoomLink={copyRoomLink}
       openRoom={() => currentRoom && setShowRoom(true)}
-      session={session}
+      session={activeSession}
       authOpen={authOpen}
       setAuthOpen={setAuthOpen}
+      onSignOut={() => {
+        setTestSession(null);
+        supabase?.auth.signOut();
+      }}
+      onTestAccess={() => {
+        setTestSession({ user: { email: "testing@learnwave.local" } });
+        setAuthOpen(false);
+      }}
     />
   );
 }
@@ -210,7 +220,18 @@ function LiveStudyRoom({ room }) {
   );
 }
 
-function LandingPage({ currentRoom, copied, createRoom, copyRoomLink, openRoom, session, authOpen, setAuthOpen }) {
+function LandingPage({
+  currentRoom,
+  copied,
+  createRoom,
+  copyRoomLink,
+  openRoom,
+  session,
+  authOpen,
+  setAuthOpen,
+  onSignOut,
+  onTestAccess
+}) {
   return (
     <main className="landing-page">
       <header className="landing-header">
@@ -226,7 +247,7 @@ function LandingPage({ currentRoom, copied, createRoom, copyRoomLink, openRoom, 
           <button type="button">Language</button>
         </nav>
         {session ? (
-          <button className="login-button" type="button" onClick={() => supabase?.auth.signOut()}>
+          <button className="login-button" type="button" onClick={onSignOut}>
             Sign out
           </button>
         ) : (
@@ -246,7 +267,7 @@ function LandingPage({ currentRoom, copied, createRoom, copyRoomLink, openRoom, 
         </button>
         {!session && <span className="account-note">Sign in to create and share a room.</span>}
 
-        {authOpen && !session && <AuthBox />}
+        {authOpen && !session && <AuthBox onTestAccess={onTestAccess} />}
 
         {session && (
           <div className="auth-session" role="status">
@@ -299,17 +320,29 @@ function LandingPage({ currentRoom, copied, createRoom, copyRoomLink, openRoom, 
   );
 }
 
-function AuthBox() {
+function AuthBox({ onTestAccess }) {
   const [mode, setMode] = useState("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [testCode, setTestCode] = useState("");
   const [status, setStatus] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const isSignup = mode === "signup";
+  const isTestCode = mode === "code";
 
   async function submitAuth(event) {
     event.preventDefault();
     setStatus("");
+
+    if (isTestCode) {
+      if (testCode.trim() === "123tester") {
+        onTestAccess();
+        return;
+      }
+
+      setStatus("Invalid test code.");
+      return;
+    }
 
     if (!supabase) {
       setStatus("Login is not available right now.");
@@ -357,34 +390,53 @@ function AuthBox() {
         <button type="button" className={isSignup ? "active" : ""} onClick={() => setMode("signup")}>
           Create account
         </button>
+        <button type="button" className={isTestCode ? "active" : ""} onClick={() => setMode("code")}>
+          Free code
+        </button>
       </div>
 
-      <label>
-        Email
-        <input
-          type="email"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          placeholder="you@example.com"
-          autoComplete="email"
-          required
-        />
-      </label>
+      {isTestCode ? (
+        <label>
+          Test code
+          <input
+            type="text"
+            value={testCode}
+            onChange={(event) => setTestCode(event.target.value)}
+            placeholder="Enter testing code"
+            autoComplete="off"
+            required
+          />
+        </label>
+      ) : (
+        <>
+          <label>
+            Email
+            <input
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder="you@example.com"
+              autoComplete="email"
+              required
+            />
+          </label>
 
-      <label>
-        Password
-        <input
-          type="password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          placeholder="Minimum 6 characters"
-          autoComplete={isSignup ? "new-password" : "current-password"}
-          required
-        />
-      </label>
+          <label>
+            Password
+            <input
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              placeholder="Minimum 6 characters"
+              autoComplete={isSignup ? "new-password" : "current-password"}
+              required
+            />
+          </label>
+        </>
+      )}
 
       <button className="auth-submit" type="submit" disabled={isLoading}>
-        {isLoading ? "Working..." : isSignup ? "Create account" : "Sign in"}
+        {isLoading ? "Working..." : isTestCode ? "Enter room" : isSignup ? "Create account" : "Sign in"}
       </button>
 
       {status && <p className="auth-status">{status}</p>}
