@@ -536,8 +536,16 @@ button {
 .whiteboard {
   position: absolute;
   inset: 0;
+  z-index: 1;
   cursor: crosshair;
   touch-action: none;
+}
+
+.whiteboard .tl-container {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: auto;
 }
 
 .whiteboard.eraser-mode {
