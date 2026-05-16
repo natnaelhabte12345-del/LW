@@ -1,6 +1,6 @@
 ﻿import react from "@vitejs/plugin-react";
 import { defineConfig, loadEnv } from "vite";
-import { handleAiChatBody } from "./api/ai-chat.js";
+import { checkAiRateLimit, handleAiChatBody } from "./api/ai-chat.js";
 
 function readJsonBody(req) {
   return new Promise((resolve, reject) => {
@@ -17,6 +17,16 @@ function readJsonBody(req) {
     });
     req.on("error", reject);
   });
+}
+
+function getLocalClientId(req) {
+  const forwardedFor = req.headers["x-forwarded-for"];
+  const realIp = req.headers["x-real-ip"];
+  const ip = Array.isArray(forwardedFor) ? forwardedFor[0] : forwardedFor || realIp || req.socket?.remoteAddress;
+
+  return String(ip || "local")
+    .split(",")[0]
+    .trim();
 }
 
 export default defineConfig(({ mode }) => {
@@ -37,6 +47,16 @@ export default defineConfig(({ mode }) => {
             }
 
             try {
+              const rateLimit = checkAiRateLimit(getLocalClientId(req));
+
+              if (!rateLimit.allowed) {
+                res.statusCode = 429;
+                res.setHeader("Retry-After", String(rateLimit.retryAfterSeconds));
+                res.setHeader("Content-Type", "application/json");
+                res.end(JSON.stringify({ error: "AI request limit reached. Try again later." }));
+                return;
+              }
+
               const body = await readJsonBody(req);
               const result = await handleAiChatBody(body, env);
               res.statusCode = result.status;

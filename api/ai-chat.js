@@ -1,5 +1,9 @@
 ﻿const DEFAULT_MODEL = "gemini-flash-lite-latest";
 
+const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
+const RATE_LIMIT_MAX_REQUESTS = 20;
+const rateLimitBuckets = new Map();
+
 const SYSTEM_PROMPT = [
   "You are a direct AI study tutor inside a shared study room.",
   "Check solutions clearly as correct, incorrect, or partially correct.",
@@ -100,6 +104,55 @@ export async function handleAiChatBody(body, env = process.env) {
   };
 }
 
+export function checkAiRateLimit(clientId = "anonymous") {
+  const now = Date.now();
+  const bucketKey = String(clientId || "anonymous");
+  const bucket = rateLimitBuckets.get(bucketKey);
+
+  if (!bucket || now > bucket.resetAt) {
+    cleanupRateLimitBuckets(now);
+    rateLimitBuckets.set(bucketKey, {
+      count: 1,
+      resetAt: now + RATE_LIMIT_WINDOW_MS
+    });
+    return { allowed: true, remaining: RATE_LIMIT_MAX_REQUESTS - 1 };
+  }
+
+  if (bucket.count >= RATE_LIMIT_MAX_REQUESTS) {
+    return {
+      allowed: false,
+      remaining: 0,
+      retryAfterSeconds: Math.max(1, Math.ceil((bucket.resetAt - now) / 1000))
+    };
+  }
+
+  bucket.count += 1;
+  return {
+    allowed: true,
+    remaining: RATE_LIMIT_MAX_REQUESTS - bucket.count
+  };
+}
+
+function cleanupRateLimitBuckets(now) {
+  if (rateLimitBuckets.size < 500) return;
+
+  for (const [key, bucket] of rateLimitBuckets.entries()) {
+    if (now > bucket.resetAt) {
+      rateLimitBuckets.delete(key);
+    }
+  }
+}
+
+function getClientId(req) {
+  const forwardedFor = req.headers["x-forwarded-for"];
+  const realIp = req.headers["x-real-ip"];
+  const ip = Array.isArray(forwardedFor) ? forwardedFor[0] : forwardedFor || realIp || req.socket?.remoteAddress;
+
+  return String(ip || "anonymous")
+    .split(",")[0]
+    .trim();
+}
+
 function fetchGemini(model, apiKey, contents) {
   return fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
     method: "POST",
@@ -138,6 +191,16 @@ export default async function handler(req, res) {
   }
 
   try {
+    const rateLimit = checkAiRateLimit(getClientId(req));
+
+    if (!rateLimit.allowed) {
+      res.setHeader("Retry-After", String(rateLimit.retryAfterSeconds));
+      res.status(429).json({
+        error: "AI request limit reached. Try again later."
+      });
+      return;
+    }
+
     const result = await handleAiChatBody(req.body);
     res.status(result.status).json(result.body);
   } catch {
