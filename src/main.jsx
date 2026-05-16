@@ -713,33 +713,10 @@ function IconButton({ icon, label, active = false, onClick }) {
 }
 
 function Whiteboard({ showPeers, liveCursors, updateMyPresence, onMount }) {
-  const lastPresenceUpdateRef = useRef(0);
-
-  function handlePointerMove(event) {
-    if (!updateMyPresence) return;
-    const now = performance.now();
-    if (now - lastPresenceUpdateRef.current < 50) return;
-    lastPresenceUpdateRef.current = now;
-
-    const rect = event.currentTarget.getBoundingClientRect();
-    updateMyPresence({
-      cursor: {
-        x: ((event.clientX - rect.left) / rect.width) * 100,
-        y: ((event.clientY - rect.top) / rect.height) * 100
-      }
-    });
-  }
-
-  function handlePointerLeave() {
-    updateMyPresence?.({ cursor: null });
-  }
-
   return (
     <div
       className="whiteboard tldraw-board"
       data-testid="whiteboard"
-      onPointerMove={handlePointerMove}
-      onPointerLeave={handlePointerLeave}
     >
       <Tldraw hideUi onMount={onMount} />
       {showPeers && liveCursors.length > 0
