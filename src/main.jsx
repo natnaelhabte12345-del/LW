@@ -1,6 +1,6 @@
 ﻿import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { DefaultColorStyle, DefaultSizeStyle, createShapeId } from "@tldraw/editor";
+import { createShapeId } from "@tldraw/editor";
 import { createClient } from "@supabase/supabase-js";
 import {
   LiveblocksProvider,
@@ -22,12 +22,10 @@ import {
   Check,
   Copy,
   Clapperboard,
-  Eraser,
   FileImage,
   ImagePlus,
   MousePointer2,
   Pause,
-  Pencil,
   Play,
   Plus,
   Share2,
@@ -78,13 +76,6 @@ const videoLibrary = [
     topic: "English",
     id: "jNQXAC9IVRw"
   }
-];
-
-const brushSizes = [
-  { label: "Thin", value: "s", preview: 5 },
-  { label: "Normal", value: "m", preview: 8 },
-  { label: "Wide", value: "l", preview: 11 },
-  { label: "Extra wide", value: "xl", preview: 14 }
 ];
 
 const liveblocksPublicKey = import.meta.env.VITE_LIVEBLOCKS_PUBLIC_KEY;
@@ -455,8 +446,6 @@ function StudyRoom({
   videoSyncEvent,
   broadcastVideoSync
 }) {
-  const [tool, setTool] = useState("pen");
-  const [brushSizeIndex, setBrushSizeIndex] = useState(3);
   const [editor, setEditor] = useState(null);
   const [panel, setPanel] = useState("ai");
   const [selectedVideo, setSelectedVideo] = useState(null);
@@ -465,16 +454,6 @@ function StudyRoom({
   const [boardUpload, setBoardUpload] = useState(null);
   const [showPeers, setShowPeers] = useState(false);
   const stagePlayerRef = useRef(null);
-
-  function applyEditorTool(targetEditor = editor, nextTool = tool, nextBrushSizeIndex = brushSizeIndex) {
-    if (!targetEditor) return;
-
-    targetEditor.setStyleForNextShapes(DefaultColorStyle, "blue");
-    targetEditor.setStyleForNextShapes(DefaultSizeStyle, brushSizes[nextBrushSizeIndex].value);
-    targetEditor.updateInstanceState?.({ isToolLocked: true });
-    targetEditor.setCurrentTool(nextTool === "eraser" ? "eraser" : "draw");
-    targetEditor.focus?.({ focusContainer: false });
-  }
 
   useEffect(() => {
     if (!videoSyncEvent) return;
@@ -486,24 +465,9 @@ function StudyRoom({
     }
   }, [videoSyncEvent]);
 
-  useEffect(() => {
-    applyEditorTool(editor, tool, brushSizeIndex);
-  }, [editor, tool, brushSizeIndex, liveStatus]);
-
-  function selectWhiteboardTool(nextTool) {
-    setTool(nextTool);
-    applyEditorTool(editor, nextTool, brushSizeIndex);
-  }
-
   function clearBoard() {
     if (!editor) return;
     editor.deleteShapes([...editor.getCurrentPageShapeIds()]);
-  }
-
-  function changeBrushSize(index) {
-    const nextIndex = Number(index);
-    setBrushSizeIndex(nextIndex);
-    applyEditorTool(editor, tool, nextIndex);
   }
 
   function handlePhoto(event) {
@@ -575,12 +539,8 @@ function StudyRoom({
       <section className="workspace" aria-label="Shared study room">
         <RoomHeader room={room} />
         <Toolbar
-          tool={tool}
-          setTool={selectWhiteboardTool}
           panel={panel}
           setPanel={setPanel}
-          brushSizeIndex={brushSizeIndex}
-          setBrushSizeIndex={changeBrushSize}
           showPeers={showPeers}
           setShowPeers={setShowPeers}
           clearBoard={clearBoard}
@@ -590,13 +550,7 @@ function StudyRoom({
           showPeers={showPeers}
           liveCursors={showPeers ? liveCursors : []}
           updateMyPresence={updateMyPresence}
-          onBoardPointerDown={() => applyEditorTool(editor, tool, brushSizeIndex)}
-          onMount={(mountedEditor) => {
-            setEditor(mountedEditor);
-            applyEditorTool(mountedEditor, tool, brushSizeIndex);
-            window.setTimeout(() => applyEditorTool(mountedEditor, tool, brushSizeIndex), 250);
-            window.setTimeout(() => applyEditorTool(mountedEditor, tool, brushSizeIndex), 1200);
-          }}
+          onMount={setEditor}
         />
         <WorkspaceVideo
           show={showStageVideo && Boolean(selectedVideo)}
@@ -663,41 +617,14 @@ function RoomHeader({ room }) {
 }
 
 function Toolbar({
-  tool,
-  setTool,
   panel,
   setPanel,
-  brushSizeIndex,
-  setBrushSizeIndex,
   showPeers,
   setShowPeers,
   clearBoard
 }) {
   return (
-    <nav className="toolbar" aria-label="Whiteboard Toolbar">
-      <IconButton active={tool === "pen"} label="Pen" onClick={() => setTool("pen")} icon={<Pencil />} />
-      {tool === "pen" && (
-        <label className="thickness-control" title={`Stroke width: ${brushSizes[brushSizeIndex].label}`}>
-          <span
-            aria-hidden="true"
-            style={{
-              width: `${brushSizes[brushSizeIndex].preview}px`,
-              height: `${brushSizes[brushSizeIndex].preview}px`
-            }}
-          />
-          <input
-            aria-label="Stroke width"
-            type="range"
-            min="0"
-            max="3"
-            step="1"
-            value={brushSizeIndex}
-            onChange={(event) => setBrushSizeIndex(event.target.value)}
-          />
-        </label>
-      )}
-      <IconButton active={tool === "eraser"} label="Eraser" onClick={() => setTool("eraser")} icon={<Eraser />} />
-      <span className="toolbar-divider" />
+    <nav className="toolbar" aria-label="Room tools">
       <IconButton active={panel === "ai"} label="AI Tutor" onClick={() => setPanel("ai")} icon={<Sparkles />} />
       <IconButton active={panel === "video"} label="Video Sync" onClick={() => setPanel("video")} icon={<Clapperboard />} />
       <IconButton active={panel === "photo"} label="Upload" onClick={() => setPanel("photo")} icon={<Upload />} />
@@ -721,16 +648,12 @@ function IconButton({ icon, label, active = false, onClick }) {
   );
 }
 
-function Whiteboard({ roomId, showPeers, liveCursors, updateMyPresence, onBoardPointerDown, onMount }) {
+function Whiteboard({ roomId, showPeers, liveCursors, updateMyPresence, onMount }) {
   const store = useSyncDemo({ roomId: `learnwave-${roomId}` });
 
   return (
-    <div
-      className="whiteboard tldraw-board"
-      data-testid="whiteboard"
-      onPointerDownCapture={onBoardPointerDown}
-    >
-      <Tldraw store={store} hideUi autoFocus initialState="draw" onMount={onMount} />
+    <div className="whiteboard tldraw-board" data-testid="whiteboard">
+      <Tldraw store={store} autoFocus initialState="draw" onMount={onMount} />
       {showPeers && liveCursors.length > 0
         ? liveCursors.map((peer) => <LivePeerCursor key={peer.name} peer={peer} />)
         : showPeers && peerCursors.map((peer) => <PeerCursor key={peer.name} peer={peer} />)}

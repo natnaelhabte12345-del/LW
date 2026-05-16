@@ -501,31 +501,6 @@ button {
   background: var(--blue);
 }
 
-.thickness-control {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  height: 40px;
-  padding: 0 10px;
-  color: var(--blue);
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 999px;
-}
-
-.thickness-control span {
-  display: block;
-  flex: 0 0 auto;
-  background: currentColor;
-  border-radius: 999px;
-}
-
-.thickness-control input {
-  width: 78px;
-  accent-color: var(--blue);
-  cursor: pointer;
-}
-
 .toolbar-divider {
   width: 1px;
   height: 28px;
@@ -537,10 +512,6 @@ button {
   position: absolute;
   inset: 0;
   z-index: 1;
-}
-
-.whiteboard.eraser-mode {
-  cursor: cell;
 }
 
 .ink-layer {
