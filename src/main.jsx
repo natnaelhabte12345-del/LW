@@ -465,6 +465,16 @@ function StudyRoom({
   const [showPeers, setShowPeers] = useState(false);
   const stagePlayerRef = useRef(null);
 
+  function applyEditorTool(targetEditor = editor, nextTool = tool, nextBrushSizeIndex = brushSizeIndex) {
+    if (!targetEditor) return;
+
+    targetEditor.setStyleForNextShapes(DefaultColorStyle, "blue");
+    targetEditor.setStyleForNextShapes(DefaultSizeStyle, brushSizes[nextBrushSizeIndex].value);
+    targetEditor.updateInstanceState?.({ isToolLocked: true });
+    targetEditor.setCurrentTool(nextTool === "eraser" ? "eraser" : "draw");
+    targetEditor.focus?.({ focusContainer: false });
+  }
+
   useEffect(() => {
     if (!videoSyncEvent) return;
     if (videoSyncEvent.video?.id) {
@@ -475,13 +485,13 @@ function StudyRoom({
     }
   }, [videoSyncEvent]);
 
+  useEffect(() => {
+    applyEditorTool(editor, tool, brushSizeIndex);
+  }, [editor, tool, brushSizeIndex, liveStatus]);
+
   function selectWhiteboardTool(nextTool) {
     setTool(nextTool);
-    if (!editor) return;
-    editor.setCurrentTool(nextTool === "eraser" ? "eraser" : "draw");
-    if (nextTool === "pen") {
-      editor.setStyleForNextShapes(DefaultSizeStyle, brushSizes[brushSizeIndex].value);
-    }
+    applyEditorTool(editor, nextTool, brushSizeIndex);
   }
 
   function clearBoard() {
@@ -492,11 +502,7 @@ function StudyRoom({
   function changeBrushSize(index) {
     const nextIndex = Number(index);
     setBrushSizeIndex(nextIndex);
-    if (!editor) return;
-    editor.setStyleForNextShapes(DefaultSizeStyle, brushSizes[nextIndex].value);
-    if (tool === "pen") {
-      editor.setCurrentTool("draw");
-    }
+    applyEditorTool(editor, tool, nextIndex);
   }
 
   function handlePhoto(event) {
@@ -582,11 +588,12 @@ function StudyRoom({
           showPeers={showPeers}
           liveCursors={showPeers ? liveCursors : []}
           updateMyPresence={updateMyPresence}
+          onBoardPointerDown={() => applyEditorTool(editor, tool, brushSizeIndex)}
           onMount={(mountedEditor) => {
             setEditor(mountedEditor);
-            mountedEditor.setStyleForNextShapes(DefaultColorStyle, "blue");
-            mountedEditor.setStyleForNextShapes(DefaultSizeStyle, brushSizes[brushSizeIndex].value);
-            mountedEditor.setCurrentTool("draw");
+            applyEditorTool(mountedEditor, tool, brushSizeIndex);
+            window.setTimeout(() => applyEditorTool(mountedEditor, tool, brushSizeIndex), 250);
+            window.setTimeout(() => applyEditorTool(mountedEditor, tool, brushSizeIndex), 1200);
           }}
         />
         <WorkspaceVideo
@@ -712,13 +719,14 @@ function IconButton({ icon, label, active = false, onClick }) {
   );
 }
 
-function Whiteboard({ showPeers, liveCursors, updateMyPresence, onMount }) {
+function Whiteboard({ showPeers, liveCursors, updateMyPresence, onBoardPointerDown, onMount }) {
   return (
     <div
       className="whiteboard tldraw-board"
       data-testid="whiteboard"
+      onPointerDownCapture={onBoardPointerDown}
     >
-      <Tldraw hideUi onMount={onMount} />
+      <Tldraw hideUi autoFocus initialState="draw" onMount={onMount} />
       {showPeers && liveCursors.length > 0
         ? liveCursors.map((peer) => <LivePeerCursor key={peer.name} peer={peer} />)
         : showPeers && peerCursors.map((peer) => <PeerCursor key={peer.name} peer={peer} />)}
