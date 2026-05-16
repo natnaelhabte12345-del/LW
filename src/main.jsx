@@ -7,9 +7,8 @@ import {
   RoomProvider,
   useBroadcastEvent,
   useEventListener,
-  useOthers,
   useStatus,
-  useUpdateMyPresence
+  useOthers
 } from "@liveblocks/react";
 import { Tldraw } from "tldraw";
 import { useSyncDemo } from "@tldraw/sync";
@@ -24,7 +23,6 @@ import {
   Clapperboard,
   FileImage,
   ImagePlus,
-  MousePointer2,
   Pause,
   Play,
   Plus,
@@ -33,18 +31,10 @@ import {
   Send,
   Trash2,
   Upload,
-  Users,
   WandSparkles,
   X
 } from "lucide-react";
 import "./styles.css";
-
-const peerCursors = [
-  { name: "Mia", color: "#16a34a", x: 74, y: 31, note: "points at task 2" },
-  { name: "Jonas", color: "#f97316", x: 59, y: 68, note: "takes notes" }
-];
-
-const peerColors = ["#16a34a", "#f97316", "#7c3aed", "#db2777", "#0891b2"];
 
 const liveStatusLabel = {
   connecting: "connecting",
@@ -140,7 +130,7 @@ function App() {
     if (liveblocksPublicKey) {
       return (
         <LiveblocksProvider publicApiKey={liveblocksPublicKey}>
-          <RoomProvider id={currentRoom.id} initialPresence={{ cursor: null, name: "You" }}>
+          <RoomProvider id={currentRoom.id}>
             <LiveStudyRoom key={currentRoom.id} room={currentRoom} />
           </RoomProvider>
         </LiveblocksProvider>
@@ -175,16 +165,8 @@ function App() {
 function LiveStudyRoom({ room }) {
   const others = useOthers();
   const status = useStatus();
-  const updateMyPresence = useUpdateMyPresence();
   const broadcast = useBroadcastEvent();
   const [videoSyncEvent, setVideoSyncEvent] = useState(null);
-  const liveCursors = others
-    .map((other, index) => ({
-      name: other.presence?.name || `Guest ${index + 2}`,
-      cursor: other.presence?.cursor,
-      color: peerColors[index % peerColors.length]
-    }))
-    .filter((peer) => peer.cursor);
 
   useEventListener(({ event }) => {
     if (event?.type !== "VIDEO_SYNC" || event.roomId !== room.id) return;
@@ -197,8 +179,6 @@ function LiveStudyRoom({ room }) {
       liveMode="liveblocks"
       liveParticipantCount={others.length + 1}
       liveStatus={status}
-      liveCursors={liveCursors}
-      updateMyPresence={updateMyPresence}
       videoSyncEvent={videoSyncEvent}
       broadcastVideoSync={(payload) =>
         broadcast({
@@ -441,8 +421,6 @@ function StudyRoom({
   liveMode = "offline",
   liveParticipantCount = 1,
   liveStatus = "offline",
-  liveCursors = [],
-  updateMyPresence,
   videoSyncEvent,
   broadcastVideoSync
 }) {
@@ -452,7 +430,6 @@ function StudyRoom({
   const [isPlaying, setIsPlaying] = useState(false);
   const [showStageVideo, setShowStageVideo] = useState(false);
   const [boardUpload, setBoardUpload] = useState(null);
-  const [showPeers, setShowPeers] = useState(false);
   const stagePlayerRef = useRef(null);
 
   useEffect(() => {
@@ -541,15 +518,10 @@ function StudyRoom({
         <Toolbar
           panel={panel}
           setPanel={setPanel}
-          showPeers={showPeers}
-          setShowPeers={setShowPeers}
           clearBoard={clearBoard}
         />
         <Whiteboard
           roomId={room.id}
-          showPeers={showPeers}
-          liveCursors={showPeers ? liveCursors : []}
-          updateMyPresence={updateMyPresence}
           onMount={setEditor}
         />
         <WorkspaceVideo
@@ -565,7 +537,7 @@ function StudyRoom({
         />
         <WelcomeCard setPanel={setPanel} />
         <SessionBar
-          participants={showPeers ? liveParticipantCount : 1}
+          participants={liveParticipantCount}
           liveMode={liveMode}
           liveStatus={liveStatus}
         />
@@ -619,8 +591,6 @@ function RoomHeader({ room }) {
 function Toolbar({
   panel,
   setPanel,
-  showPeers,
-  setShowPeers,
   clearBoard
 }) {
   return (
@@ -629,12 +599,6 @@ function Toolbar({
       <IconButton active={panel === "video"} label="Video Sync" onClick={() => setPanel("video")} icon={<Clapperboard />} />
       <IconButton active={panel === "photo"} label="Upload" onClick={() => setPanel("photo")} icon={<Upload />} />
       <span className="toolbar-divider" />
-      <IconButton
-        active={showPeers}
-        label={showPeers ? "Hide cursors" : "Show cursors"}
-        onClick={() => setShowPeers(!showPeers)}
-        icon={<Users />}
-      />
       <IconButton label="Clear board" onClick={clearBoard} icon={<Trash2 />} />
     </nav>
   );
@@ -648,15 +612,12 @@ function IconButton({ icon, label, active = false, onClick }) {
   );
 }
 
-function Whiteboard({ roomId, showPeers, liveCursors, updateMyPresence, onMount }) {
+function Whiteboard({ roomId, onMount }) {
   const store = useSyncDemo({ roomId: `learnwave-${roomId}` });
 
   return (
     <div className="whiteboard tldraw-board" data-testid="whiteboard">
       <Tldraw store={store} autoFocus initialState="draw" onMount={onMount} />
-      {showPeers && liveCursors.length > 0
-        ? liveCursors.map((peer) => <LivePeerCursor key={peer.name} peer={peer} />)
-        : showPeers && peerCursors.map((peer) => <PeerCursor key={peer.name} peer={peer} />)}
     </div>
   );
 }
@@ -761,24 +722,6 @@ function WorkspaceVideo({
         )}
       </div>
     </section>
-  );
-}
-
-function LivePeerCursor({ peer }) {
-  return (
-    <div className="peer-cursor" style={{ left: `${peer.cursor.x}%`, top: `${peer.cursor.y}%`, color: peer.color }}>
-      <MousePointer2 size={21} fill="currentColor" />
-      <span style={{ backgroundColor: peer.color }}>{peer.name}</span>
-    </div>
-  );
-}
-
-function PeerCursor({ peer }) {
-  return (
-    <div className="peer-cursor" style={{ left: `${peer.x}%`, top: `${peer.y}%`, color: peer.color }}>
-      <MousePointer2 size={21} fill="currentColor" />
-      <span style={{ backgroundColor: peer.color }}>{peer.name}</span>
-    </div>
   );
 }
 

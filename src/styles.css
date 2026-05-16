@@ -514,34 +514,6 @@ button {
   z-index: 1;
 }
 
-.ink-layer {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-}
-
-.peer-cursor {
-  position: absolute;
-  z-index: 4;
-  display: grid;
-  gap: 2px;
-  width: 96px;
-  pointer-events: none;
-  filter: drop-shadow(0 8px 12px rgba(15, 23, 42, 0.18));
-}
-
-.peer-cursor span {
-  width: max-content;
-  max-width: 110px;
-  padding: 5px 8px;
-  color: #ffffff;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 800;
-}
-
 .workspace-video {
   position: absolute;
   top: 126px;
