@@ -13,6 +13,7 @@
     "@liveblocks/react": "^3.19.0",
     "@supabase/supabase-js": "^2.105.4",
     "@tldraw/editor": "^5.0.0",
+    "@tldraw/sync": "^5.0.1",
     "@vitejs/plugin-react": "^5.1.1",
     "lucide-react": "^0.561.0",
     "react": "^19.2.1",

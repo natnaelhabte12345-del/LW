@@ -12,6 +12,7 @@ import {
   useUpdateMyPresence
 } from "@liveblocks/react";
 import { Tldraw } from "tldraw";
+import { useSyncDemo } from "@tldraw/sync";
 import YouTube from "react-youtube";
 import "tldraw/tldraw.css";
 import {
@@ -585,6 +586,7 @@ function StudyRoom({
           clearBoard={clearBoard}
         />
         <Whiteboard
+          roomId={room.id}
           showPeers={showPeers}
           liveCursors={showPeers ? liveCursors : []}
           updateMyPresence={updateMyPresence}
@@ -719,14 +721,16 @@ function IconButton({ icon, label, active = false, onClick }) {
   );
 }
 
-function Whiteboard({ showPeers, liveCursors, updateMyPresence, onBoardPointerDown, onMount }) {
+function Whiteboard({ roomId, showPeers, liveCursors, updateMyPresence, onBoardPointerDown, onMount }) {
+  const store = useSyncDemo({ roomId: `learnwave-${roomId}` });
+
   return (
     <div
       className="whiteboard tldraw-board"
       data-testid="whiteboard"
       onPointerDownCapture={onBoardPointerDown}
     >
-      <Tldraw hideUi autoFocus initialState="draw" onMount={onMount} />
+      <Tldraw store={store} hideUi autoFocus initialState="draw" onMount={onMount} />
       {showPeers && liveCursors.length > 0
         ? liveCursors.map((peer) => <LivePeerCursor key={peer.name} peer={peer} />)
         : showPeers && peerCursors.map((peer) => <PeerCursor key={peer.name} peer={peer} />)}
