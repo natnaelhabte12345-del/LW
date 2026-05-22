@@ -278,7 +278,7 @@ function LandingPage({
           <li><Check size={18} /> Shared whiteboard for explanations</li>
           <li><Check size={18} /> Show everyone else's cursor</li>
           <li><Check size={18} /> Watch YouTube videos together</li>
-          <li><Check size={18} /> AI Tutor for questions, screenshots and solutions</li>
+          <li><Check size={18} /> AI for questions, screenshots and solutions</li>
           <li><Check size={18} /> Upload tasks and work on them together</li>
         </ul>
       </section>
@@ -595,7 +595,7 @@ function Toolbar({
 }) {
   return (
     <nav className="toolbar" aria-label="Room tools">
-      <IconButton active={panel === "ai"} label="AI Tutor" onClick={() => setPanel("ai")} icon={<Sparkles />} />
+      <IconButton active={panel === "ai"} label="AI" onClick={() => setPanel("ai")} icon={<Sparkles />} />
       <IconButton active={panel === "video"} label="Video Sync" onClick={() => setPanel("video")} icon={<Clapperboard />} />
       <IconButton active={panel === "photo"} label="Upload" onClick={() => setPanel("photo")} icon={<Upload />} />
       <span className="toolbar-divider" />
@@ -733,7 +733,7 @@ function WelcomeCard({ setPanel }) {
       </div>
       <div>
         <h1>Welcome to the study room</h1>
-        <p>Draw on the whiteboard, ask the AI Tutor, find videos and work through tasks.</p>
+        <p>Draw on the whiteboard, ask AI, find videos and work through tasks.</p>
         <div className="welcome-actions">
           <button onClick={() => setPanel("ai")}>Ask AI</button>
           <button onClick={() => setPanel("video")}>Search video</button>
@@ -764,7 +764,7 @@ function PanelTabs({ active, setPanel }) {
     <div className="panel-tabs">
       <button className={active === "ai" ? "active" : ""} onClick={() => setPanel("ai")}>
         <Brain size={16} />
-        AI Tutor
+        AI
       </button>
       <button className={active === "video" ? "active" : ""} onClick={() => setPanel("video")}>
         <Clapperboard size={16} />
@@ -840,14 +840,14 @@ function AiTutorPanel({ room }) {
       const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        throw new Error(data.error || "AI Tutor could not answer right now.");
+        throw new Error(data.error || "AI could not answer right now.");
       }
 
       setMessages((current) => [...current, { role: "assistant", content: data.answer }]);
     } catch (error) {
       setMessages((current) => [
         ...current,
-        { role: "assistant", content: error.message || "AI Tutor is not reachable right now." }
+        { role: "assistant", content: error.message || "AI is not reachable right now." }
       ]);
     } finally {
       setIsSending(false);
@@ -859,7 +859,7 @@ function AiTutorPanel({ room }) {
       <div className="panel-heading">
         <WandSparkles size={21} />
         <div>
-          <h2>AI Tutor</h2>
+          <h2>AI</h2>
           <p>Ask a question or upload a screenshot. The tutor checks your solution directly.</p>
         </div>
       </div>
